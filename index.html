@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:,"> <!-- Suppress favicon 404 -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>LinkedIn Connection Visual</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+    #sidebar {
+      position: absolute; top: 20px; right: 20px; width: 300px;
+      background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 8px;
+      max-height: 80vh; overflow-y: auto; display: block;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    #person-name { font-weight: bold; font-size: 1.2em; color: #0077b5; }
+
+    /* Hackathon "Cool" UI */
+    #ai-interface {
+      position: absolute; top: 20px; left: 20px;
+      display: flex; gap: 10px;
+      z-index: 100;
+    }
+    #ai-query {
+      padding: 12px; width: 300px;
+      border-radius: 25px; border: none;
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 0 15px rgba(0,119,181, 0.5);
+      outline: none; font-size: 16px;
+    }
+    #ai-ask-btn {
+      padding: 12px 20px;
+      background: #0077b5; color: white;
+      border: none; border-radius: 25px;
+      cursor: pointer; font-weight: bold;
+      box-shadow: 0 0 15px rgba(0,119,181, 0.5);
+      transition: all 0.2s;
+    }
+    #ai-ask-btn:hover { background: #005582; transform: scale(1.05); }
+    #loading-indicator {
+      display: none; color: #00f2ff; font-weight: bold; margin-left: 10px; line-height: 40px; text-shadow: 0 0 5px #00f2ff;
+    }
+    #controls {
+      position: absolute; top: 80px; left: 20px;
+      background: rgba(255, 255, 255, 0.9); padding: 15px; border-radius: 8px;
+      width: 300px; z-index: 100;
+    }
+    .control-group { margin-bottom: 10px; }
+    label { display: block; font-weight: bold; margin-bottom: 5px; }
+    select, button { width: 100%; padding: 8px; margin-bottom: 5px; }
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+
+  <!-- AI Command Center -->
+  <div id="ai-interface">
+    <input type="text" id="ai-query" placeholder="Ask AI: 'Show me potential co-founders...'">
+    <button id="ai-ask-btn">AI Search</button>
+    <div id="loading-indicator">Thinking...</div>
+  </div>
+
+  <!-- Controls -->
+  <div id="controls">
+    <div class="control-group">
+      <label>Layout / Sorting</label>
+      <select id="layout-mode">
+        <option value="organic selected">Organic (Force-Directed)</option>
+      </select>
+    </div>
+    <div class="control-group">
+        <label>Filter by Year</label>
+        <select id="year-filter">
+            <option value="all">All Years</option>
+        </select>
+    </div>
+    <div class="control-group">
+      <label>AI Provider</label>
+      <select id="ai-provider">
+        <option value="gemini">Google Gemini</option>
+        <option value="openai">OpenAI</option>
+      </select>
+      <input type="password" id="api-key-input" placeholder="Enter API Key (if needed)" style="margin-top: 5px; box-sizing: border-box;">
+    </div>
+    <div class="control-group">
+       <button id="rearrange-btn">Update Layout</button>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <h2>AI Connection Insight</h2>
+    <div id="person-name">Click a node...</div>
+    <hr>
+    <div id="gemini-analysis">
+      <strong>Hackathon Mode:</strong><br>
+      Ask AI to find people, analyze clusters, or suggest career paths.<br><br>
+      Try: <em>"Who works in gaming?"</em> or <em>"Find me investors."</em>
+    </div>
+
+    <!-- Filtered Nodes List -->
+    <div style="margin-top: 20px; border-top: 1px solid #ccc; padding-top: 15px;">
+      <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #0077b5;">Filtered Connections</h3>
+      <div id="filtered-nodes-list">
+        <p style="text-align: center; color: #666; font-size: 12px;">No filtered nodes</p>
+      </div>
+    </div>
+
+    <!-- Action Buttons for Selected Person -->
+    <div id="person-actions" style="display:none; margin-top: 15px; border-top: 1px solid #ccc; padding-top: 10px;">
+        <a id="linkedin-link" href="#" target="_blank" style="display:block; margin-bottom: 5px; text-decoration: none; color: #0077b5; font-weight: bold;">
+            🔗 View LinkedIn Profile
+        </a>
+        <button id="analyze-person-btn" style="width: 100%; padding: 8px; background: #0077b5; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            🤖 AI Analyze This Person
+        </button>
+    </div>
+
+    <button id="download-results-btn" style="display:none; margin-top: 15px; width: 48%; padding: 10px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">
+      Download
+    </button>
+    <button id="clear-results-btn" style="display:none; margin-top: 15px; width: 48%; padding: 10px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">
+      Delete
+    </button>
+  </div>
+
+  <!-- Persistent Action Button -->
+  <button id="view-results-btn" style="display:none; position: absolute; bottom: 20px; left: 20px; z-index: 1000; padding: 15px 25px; background: #0077b5; color: white; border: none; border-radius: 30px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.2s;">
+    📜 View Saved AI Results
+  </button>
+
+  <!-- Results List Modal -->
+  <div id="results-modal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; overflow-y: auto;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">Saved AI Search Results</h2>
+        <button id="close-results-modal" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 18px;">×</button>
+      </div>
+      <div id="results-list"></div>
+    </div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "@google/genai": "https://esm.run/@google/genai"
+      }
+    }
+  </script>
+  <!-- D3.js for custom timeline-network visualization -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <script type="module" src="LinkedinGraph.js?v=8"></script>
+</body>
+</html>
